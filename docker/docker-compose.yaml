@@ -553,6 +553,9 @@ services:
     volumes:
       # Mount the storage directory to the container, for storing user files.
       - ./volumes/app/storage:/app/api/storage
+      - ../api/core/rag/splitter:/app/api/core/rag/splitter
+    ports:
+      - "8080:3000"
     networks:
       - ssrf_proxy_network
       - default
@@ -580,6 +583,7 @@ services:
     volumes:
       # Mount the storage directory to the container, for storing user files.
       - ./volumes/app/storage:/app/api/storage
+      - ../api/core/rag/splitter:/app/api/core/rag/splitter
     networks:
       - ssrf_proxy_network
       - default

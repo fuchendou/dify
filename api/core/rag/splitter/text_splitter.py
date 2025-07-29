@@ -239,6 +239,67 @@ class TokenTextSplitter(TextSplitter):
         return split_text_on_tokens(text=text, tokenizer=tokenizer)
 
 
+# class RecursiveCharacterTextSplitter(TextSplitter):
+#     """Splitting text by recursively look at characters.
+
+#     Recursively tries to split by different characters to find one
+#     that works.
+#     """
+
+#     def __init__(
+#         self,
+#         separators: Optional[list[str]] = None,
+#         keep_separator: bool = True,
+#         **kwargs: Any,
+#     ) -> None:
+#         """Create a new TextSplitter."""
+#         super().__init__(keep_separator=keep_separator, **kwargs)
+#         self._separators = separators or ["\n\n", "\n", " ", ""]
+
+#     def _split_text(self, text: str, separators: list[str]) -> list[str]:
+#         final_chunks = []
+#         separator = separators[-1]
+#         new_separators = []
+
+#         for i, _s in enumerate(separators):
+#             if _s == "":
+#                 separator = _s
+#                 break
+#             if re.search(_s, text):
+#                 separator = _s
+#                 new_separators = separators[i + 1 :]
+#                 break
+
+#         splits = _split_text_with_regex(text, separator, self._keep_separator)
+#         _good_splits = []
+#         _good_splits_lengths = []  # cache the lengths of the splits
+#         _separator = "" if self._keep_separator else separator
+#         s_lens = self._length_function(splits)
+#         for s, s_len in zip(splits, s_lens):
+#             if s_len < self._chunk_size:
+#                 _good_splits.append(s)
+#                 _good_splits_lengths.append(s_len)
+#             else:
+#                 if _good_splits:
+#                     merged_text = self._merge_splits(_good_splits, _separator, _good_splits_lengths)
+#                     final_chunks.extend(merged_text)
+#                     _good_splits = []
+#                     _good_splits_lengths = []
+#                 if not new_separators:
+#                     final_chunks.append(s)
+#                 else:
+#                     other_info = self._split_text(s, new_separators)
+#                     final_chunks.extend(other_info)
+
+#         if _good_splits:
+#             merged_text = self._merge_splits(_good_splits, _separator, _good_splits_lengths)
+#             final_chunks.extend(merged_text)
+
+#         return final_chunks
+
+#     def split_text(self, text: str) -> list[str]:
+#         return self._split_text(text, self._separators)
+
 class RecursiveCharacterTextSplitter(TextSplitter):
     """Splitting text by recursively look at characters.
 
@@ -249,53 +310,78 @@ class RecursiveCharacterTextSplitter(TextSplitter):
     def __init__(
         self,
         separators: Optional[list[str]] = None,
+        protected_tags: Optional[list[str]] = None,
         keep_separator: bool = True,
         **kwargs: Any,
     ) -> None:
         """Create a new TextSplitter."""
         super().__init__(keep_separator=keep_separator, **kwargs)
         self._separators = separators or ["\n\n", "\n", " ", ""]
+        # protected tag list
+        self._protected_tags = protected_tags or ["image", "table"]
+        # construct protected tag pattern
+        tags_pattern = "|".join(self._protected_tags)
+        self._block_pattern = re.compile(rf"(<(?:{tags_pattern})>.*?</(?:{tags_pattern})>)", re.DOTALL)
 
-    def _split_text(self, text: str, separators: list[str]) -> list[str]:
-        final_chunks = []
-        separator = separators[-1]
-        new_separators = []
-
-        for i, _s in enumerate(separators):
-            if _s == "":
-                separator = _s
+    def _presplit_blocks(self, text: str) -> list[str]:
+        # split protected blocks and common chunks
+        parts = self._block_pattern.split(text)
+        return [p for p in parts if p]
+        
+    def _recursive_split(self, text: str, separators: list[str]) -> list[str]:
+        for i, sep in enumerate(separators):
+            if sep == "" or re.search(re.escape(sep), text):
+                chosen, rest = sep, separators[i+1:]
                 break
-            if re.search(_s, text):
-                separator = _s
-                new_separators = separators[i + 1 :]
-                break
-
-        splits = _split_text_with_regex(text, separator, self._keep_separator)
-        _good_splits = []
-        _good_splits_lengths = []  # cache the lengths of the splits
-        _separator = "" if self._keep_separator else separator
-        s_lens = self._length_function(splits)
-        for s, s_len in zip(splits, s_lens):
-            if s_len < self._chunk_size:
-                _good_splits.append(s)
-                _good_splits_lengths.append(s_len)
+        splits = _split_text_with_regex(text, chosen, self._keep_separator)
+        good, good_lens, result = [], [], []
+        for s in splits:
+            length = self._length_function([s])[0]
+            if length < self._chunk_size:
+                good.append(s)
+                good_lens.append(length)
             else:
-                if _good_splits:
-                    merged_text = self._merge_splits(_good_splits, _separator, _good_splits_lengths)
-                    final_chunks.extend(merged_text)
-                    _good_splits = []
-                    _good_splits_lengths = []
-                if not new_separators:
-                    final_chunks.append(s)
+                if good:
+                    result.extend(self._merge_splits(good, "" if self._keep_separator else chosen, good_lens))
+                    good, good_lens = [], []
+                if rest:
+                    result.extend(self._recursive_split(s, rest))
                 else:
-                    other_info = self._split_text(s, new_separators)
-                    final_chunks.extend(other_info)
-
-        if _good_splits:
-            merged_text = self._merge_splits(_good_splits, _separator, _good_splits_lengths)
-            final_chunks.extend(merged_text)
-
-        return final_chunks
+                    result.append(s)
+        if good:
+            result.extend(self._merge_splits(good, "" if self._keep_separator else chosen, good_lens))
+        return result
 
     def split_text(self, text: str) -> list[str]:
-        return self._split_text(text, self._separators)
+        chunks: list[str] = []
+        # prechunk according to the protected blocks
+        segments = self._presplit_blocks(text)
+        for seg in segments:
+            if self._block_pattern.fullmatch(seg):
+                chunks.append(seg)
+            else:
+                chunks.extend(self._recursive_split(seg, self._separators))
+        # postprocess: merge protected blocks with previous chunk if it's short
+        merged: list[str] = []
+        cursor = 0
+        for chunk in chunks:
+            is_prot = self._block_pattern.fullmatch(chunk)
+            start = text.find(chunk, cursor)
+            # judge if it's a protected block in the middle of a chunk
+            inline_prot = False
+            if is_prot and start > 0:
+                prev_char = text[start - 1]
+                # inline protected block
+                if prev_char not in ['\n']:
+                    inline_prot = True
+            if inline_prot and merged:
+                # if the previous chunk is short, merge with it
+                if len(merged[-1]) < self._chunk_size:
+                    merged[-1] = merged[-1] + chunk
+                    cursor = start + len(chunk)
+                    continue
+            # otherwise, append it as a new chunk
+            merged.append(chunk)
+            cursor = start + len(chunk)
+
+        return merged
