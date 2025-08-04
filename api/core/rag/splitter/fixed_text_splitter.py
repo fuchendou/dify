@@ -10,13 +10,15 @@ from core.rag.splitter.text_splitter import (
     Collection,
     Literal,
     RecursiveCharacterTextSplitter,
+    SequentialTextSplitter,
+    ChunkTextSplitter,
     Set,
     TokenTextSplitter,
     Union,
 )
 
 
-class EnhanceRecursiveCharacterTextSplitter(RecursiveCharacterTextSplitter):
+class EnhanceRecursiveCharacterTextSplitter(SequentialTextSplitter):
     """
     This class is used to implement from_gpt2_encoder, to prevent using of tiktoken
     """
@@ -54,132 +56,93 @@ class EnhanceRecursiveCharacterTextSplitter(RecursiveCharacterTextSplitter):
 
         return cls(length_function=_character_encoder, **kwargs)
 
+# class FixedRecursiveCharacterTextSplitter(EnhanceRecursiveCharacterTextSplitter):
+#     """
+#     Fixed splitter: conditionally split by a fixed separator, then use SequentialTextSplitter
+#     """
+    
+#     def __init__(
+#         self,
+#         fixed_separator: str = "\n\n",
+#         separators: Optional[list[str]] = None,
+#         read_size: int = 1024,
+#         protected_tags: Optional[list[str]] = None,
+#         **kwargs: Any,
+#     ):
+#         """Create a new FixedRecursiveCharacterTextSplitter.
+        
+#         Args:
+#             fixed_separator: The separator to use for initial splitting
+#             read_size: Size of buffer to read at each step for SequentialTextSplitter
+#             protected_tags: List of tags to treat as protected blocks
+#             **kwargs: Additional arguments passed to parent class
+#         """
+#         super().__init__(**kwargs)
+#         self._fixed_separator = fixed_separator
+#         self._separators = separators
+        
+#         # Create a SequentialTextSplitter instance for processing each segment
+#         self._sequential_splitter = SequentialTextSplitter(
+#             chunk_size=self._chunk_size,
+#             chunk_overlap=self._chunk_overlap,
+#             length_function=self._length_function,
+#             read_size=read_size,
+#             protected_tags=protected_tags,
+#         )
+
+#     def _is_newline_only_separator(self, separator: str) -> bool:
+#         """Check if the separator consists only of newline characters."""
+#         if not separator:
+#             return False
+        
+#         # Check if separator contains only '\n' characters
+#         return all(char == '\n' for char in separator)
+
+#     def split_text(self, text: str) -> list[str]:
+#         """Split text using conditional strategy based on fixed_separator."""
+#         if not text:
+#             return []
+        
+#         # 1. Check if fixed_separator is newline-only
+#         if self._is_newline_only_separator(self._fixed_separator):
+#             # Directly use SequentialTextSplitter for the entire text
+#             return self._sequential_splitter.split_text(text)
+        
+#         # 2. Other cases: first split by fixed_separator, then use SequentialTextSplitter
+#         segments = text.split(self._fixed_separator)
+        
+#         all_chunks = []
+#         for segment in segments:
+#             if segment.strip():  # Skip empty segments
+#                 # Use SequentialTextSplitter to split each segment
+#                 segment_chunks = self._sequential_splitter.split_text(segment)
+#                 all_chunks.extend(segment_chunks)
+        
+#         return all_chunks
+
 class FixedRecursiveCharacterTextSplitter(EnhanceRecursiveCharacterTextSplitter):
-    """
-    Fixed splitter: first split by a fixed separator, then defer to RecursiveCharacterTextSplitter logic
-    """
     def __init__(
         self,
         fixed_separator: str = "\n\n",
         separators: Optional[list[str]] = None,
+        read_size: int = 1024,
+        protected_tags: Optional[list[str]] = None,
         **kwargs: Any,
     ):
-        super().__init__(separators=separators, **kwargs)
-        self.fixed_separator = fixed_separator
+        super().__init__(**kwargs)
+        self._fixed_separator = fixed_separator
+        self._separators = separators
+        
+        self._chunk_splitter = ChunkTextSplitter(
+            chunk_size=self._chunk_size,
+            chunk_overlap=self._chunk_overlap,
+            length_function=self._length_function,
+            protected_tags=protected_tags,
+        )
 
     def split_text(self, text: str) -> list[str]:
-        # split by fixed separator
-        paragraphs = text.split(self.fixed_separator)
+        """Split text using conditional strategy based on fixed_separator."""
+        if not text:
+            return []
 
-        all_chunks = []
-
-        for paragraph in paragraphs:
-            paragraph = paragraph.strip()
-            if not paragraph:
-                continue
-
-            # split by recursive character splitter
-            paragraph_chunks = super().split_text(paragraph)
-
-            all_chunks.extend(paragraph_chunks)
-
-        return all_chunks
-
-# class FixedRecursiveCharacterTextSplitter(EnhanceRecursiveCharacterTextSplitter):
-#     def __init__(self, fixed_separator: str = "\n\n", separators: Optional[list[str]] = None, **kwargs: Any):
-#         """Create a new TextSplitter."""
-#         super().__init__(**kwargs)
-#         self._fixed_separator = fixed_separator
-#         self._separators = separators or ["\n\n", "\n", " ", ""]
-
-#     def split_text(self, text: str) -> list[str]:
-#         """Split incoming text and return chunks."""
-#         if self._fixed_separator:
-#             chunks = text.split(self._fixed_separator)
-#         else:
-#             chunks = [text]
-
-#         final_chunks = []
-#         chunks_lengths = self._length_function(chunks)
-#         for chunk, chunk_length in zip(chunks, chunks_lengths):
-#             if chunk_length > self._chunk_size:
-#                 final_chunks.extend(self.recursive_split_text(chunk))
-#             else:
-#                 final_chunks.append(chunk)
-
-#         return final_chunks
-
-#     def recursive_split_text(self, text: str) -> list[str]:
-#         """Split incoming text and return chunks."""
-
-#         final_chunks = []
-#         separator = self._separators[-1]
-#         new_separators = []
-
-#         for i, _s in enumerate(self._separators):
-#             if _s == "":
-#                 separator = _s
-#                 break
-#             if _s in text:
-#                 separator = _s
-#                 new_separators = self._separators[i + 1 :]
-#                 break
-
-#         # Now that we have the separator, split the text
-#         if separator:
-#             if separator == " ":
-#                 splits = text.split()
-#             else:
-#                 splits = text.split(separator)
-#                 splits = [item + separator if i < len(splits) else item for i, item in enumerate(splits)]
-#         else:
-#             splits = list(text)
-#         splits = [s for s in splits if (s not in {"", "\n"})]
-#         _good_splits = []
-#         _good_splits_lengths = []  # cache the lengths of the splits
-#         _separator = "" if self._keep_separator else separator
-#         s_lens = self._length_function(splits)
-#         if separator != "":
-#             for s, s_len in zip(splits, s_lens):
-#                 if s_len < self._chunk_size:
-#                     _good_splits.append(s)
-#                     _good_splits_lengths.append(s_len)
-#                 else:
-#                     if _good_splits:
-#                         merged_text = self._merge_splits(_good_splits, _separator, _good_splits_lengths)
-#                         final_chunks.extend(merged_text)
-#                         _good_splits = []
-#                         _good_splits_lengths = []
-#                     if not new_separators:
-#                         final_chunks.append(s)
-#                     else:
-#                         other_info = self._split_text(s, new_separators)
-#                         final_chunks.extend(other_info)
-
-#             if _good_splits:
-#                 merged_text = self._merge_splits(_good_splits, _separator, _good_splits_lengths)
-#                 final_chunks.extend(merged_text)
-#         else:
-#             current_part = ""
-#             current_length = 0
-#             overlap_part = ""
-#             overlap_part_length = 0
-#             for s, s_len in zip(splits, s_lens):
-#                 if current_length + s_len <= self._chunk_size - self._chunk_overlap:
-#                     current_part += s
-#                     current_length += s_len
-#                 elif current_length + s_len <= self._chunk_size:
-#                     current_part += s
-#                     current_length += s_len
-#                     overlap_part += s
-#                     overlap_part_length += s_len
-#                 else:
-#                     final_chunks.append(current_part)
-#                     current_part = overlap_part + s
-#                     current_length = s_len + overlap_part_length
-#                     overlap_part = ""
-#                     overlap_part_length = 0
-#             if current_part:
-#                 final_chunks.append(current_part)
-
-#         return final_chunks
+        return self._chunk_splitter.split_text(text)
