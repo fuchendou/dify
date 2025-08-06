@@ -10,7 +10,6 @@ from core.rag.splitter.text_splitter import (
     Collection,
     Literal,
     RecursiveCharacterTextSplitter,
-    SequentialTextSplitter,
     ChunkTextSplitter,
     Set,
     TokenTextSplitter,
@@ -18,7 +17,7 @@ from core.rag.splitter.text_splitter import (
 )
 
 
-class EnhanceRecursiveCharacterTextSplitter(SequentialTextSplitter):
+class EnhanceRecursiveCharacterTextSplitter(ChunkTextSplitter):
     """
     This class is used to implement from_gpt2_encoder, to prevent using of tiktoken
     """
@@ -56,69 +55,6 @@ class EnhanceRecursiveCharacterTextSplitter(SequentialTextSplitter):
 
         return cls(length_function=_character_encoder, **kwargs)
 
-# class FixedRecursiveCharacterTextSplitter(EnhanceRecursiveCharacterTextSplitter):
-#     """
-#     Fixed splitter: conditionally split by a fixed separator, then use SequentialTextSplitter
-#     """
-    
-#     def __init__(
-#         self,
-#         fixed_separator: str = "\n\n",
-#         separators: Optional[list[str]] = None,
-#         read_size: int = 1024,
-#         protected_tags: Optional[list[str]] = None,
-#         **kwargs: Any,
-#     ):
-#         """Create a new FixedRecursiveCharacterTextSplitter.
-        
-#         Args:
-#             fixed_separator: The separator to use for initial splitting
-#             read_size: Size of buffer to read at each step for SequentialTextSplitter
-#             protected_tags: List of tags to treat as protected blocks
-#             **kwargs: Additional arguments passed to parent class
-#         """
-#         super().__init__(**kwargs)
-#         self._fixed_separator = fixed_separator
-#         self._separators = separators
-        
-#         # Create a SequentialTextSplitter instance for processing each segment
-#         self._sequential_splitter = SequentialTextSplitter(
-#             chunk_size=self._chunk_size,
-#             chunk_overlap=self._chunk_overlap,
-#             length_function=self._length_function,
-#             read_size=read_size,
-#             protected_tags=protected_tags,
-#         )
-
-#     def _is_newline_only_separator(self, separator: str) -> bool:
-#         """Check if the separator consists only of newline characters."""
-#         if not separator:
-#             return False
-        
-#         # Check if separator contains only '\n' characters
-#         return all(char == '\n' for char in separator)
-
-#     def split_text(self, text: str) -> list[str]:
-#         """Split text using conditional strategy based on fixed_separator."""
-#         if not text:
-#             return []
-        
-#         # 1. Check if fixed_separator is newline-only
-#         if self._is_newline_only_separator(self._fixed_separator):
-#             # Directly use SequentialTextSplitter for the entire text
-#             return self._sequential_splitter.split_text(text)
-        
-#         # 2. Other cases: first split by fixed_separator, then use SequentialTextSplitter
-#         segments = text.split(self._fixed_separator)
-        
-#         all_chunks = []
-#         for segment in segments:
-#             if segment.strip():  # Skip empty segments
-#                 # Use SequentialTextSplitter to split each segment
-#                 segment_chunks = self._sequential_splitter.split_text(segment)
-#                 all_chunks.extend(segment_chunks)
-        
-#         return all_chunks
 
 class FixedRecursiveCharacterTextSplitter(EnhanceRecursiveCharacterTextSplitter):
     def __init__(
@@ -133,16 +69,15 @@ class FixedRecursiveCharacterTextSplitter(EnhanceRecursiveCharacterTextSplitter)
         self._fixed_separator = fixed_separator
         self._separators = separators
         
-        self._chunk_splitter = ChunkTextSplitter(
+        self._splitter = ChunkTextSplitter(
             chunk_size=self._chunk_size,
             chunk_overlap=self._chunk_overlap,
-            length_function=self._length_function,
-            protected_tags=protected_tags,
         )
 
     def split_text(self, text: str) -> list[str]:
         """Split text using conditional strategy based on fixed_separator."""
         if not text:
             return []
+        
+        return self._splitter.split_text(text)
 
-        return self._chunk_splitter.split_text(text)
