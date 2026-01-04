@@ -9,7 +9,10 @@ from core.tools.tool_file_manager import ToolFileManager
 from core.workflow.enums import NodeType
 from core.workflow.graph import NodeFactory
 from core.workflow.nodes.base.node import Node
-from core.workflow.nodes.http_request.executor import FileManagerProtocol, HttpClientProtocol
+from core.workflow.nodes.http_request.executor import (
+    FileManagerProtocol,
+    HttpClientProtocol,
+)
 from core.workflow.nodes.http_request.node import HttpRequestNode
 from libs.typing import is_str, is_str_dict
 
