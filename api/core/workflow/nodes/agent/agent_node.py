@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from core.agent.entities import AgentToolEntity
 from core.agent.plugin_entities import AgentStrategyParameter
 from core.file import File, FileTransferMethod
-from core.memory.token_buffer_memory import TokenBufferMemory
+from core.memory import ConversationLevelMemory
 from core.model_manager import ModelInstance, ModelManager
 from core.model_runtime.entities.llm_entities import LLMUsage, LLMUsageMetadata
 from core.model_runtime.entities.model_entities import AIModelEntity, ModelType
@@ -393,7 +393,7 @@ class AgentNode(Node[AgentNodeData]):
             icon = None
         return icon
 
-    def _fetch_memory(self, model_instance: ModelInstance) -> TokenBufferMemory | None:
+    def _fetch_memory(self, model_instance: ModelInstance) -> ConversationLevelMemory | None:
         # get conversation id
         conversation_id_variable = self.graph_runtime_state.variable_pool.get(
             ["sys", SystemVariableKey.CONVERSATION_ID]
@@ -409,7 +409,7 @@ class AgentNode(Node[AgentNodeData]):
             if not conversation:
                 return None
 
-        memory = TokenBufferMemory(conversation=conversation, model_instance=model_instance)
+        memory = ConversationLevelMemory(conversation=conversation, model_instance=model_instance)
 
         return memory
 

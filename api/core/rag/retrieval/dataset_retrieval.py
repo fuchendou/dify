@@ -21,7 +21,7 @@ from core.callback_handler.index_tool_callback_handler import DatasetIndexToolCa
 from core.entities.agent_entities import PlanningStrategy
 from core.entities.model_entities import ModelStatus
 from core.file import File, FileTransferMethod, FileType
-from core.memory.token_buffer_memory import TokenBufferMemory
+from core.memory import ConversationLevelMemory
 from core.model_manager import ModelInstance, ModelManager
 from core.model_runtime.entities.llm_entities import LLMResult, LLMUsage
 from core.model_runtime.entities.message_entities import PromptMessage, PromptMessageRole, PromptMessageTool
@@ -103,7 +103,7 @@ class DatasetRetrieval:
         show_retrieve_source: bool,
         hit_callback: DatasetIndexToolCallbackHandler,
         message_id: str,
-        memory: TokenBufferMemory | None = None,
+        memory: ConversationLevelMemory | None = None,
         inputs: Mapping[str, Any] | None = None,
         vision_enabled: bool = False,
     ) -> tuple[str | None, list[File] | None]:

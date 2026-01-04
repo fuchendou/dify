@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, cast
 from core.app.app_config.entities import PromptTemplateEntity
 from core.app.entities.app_invoke_entities import ModelConfigWithCredentialsEntity
 from core.file import file_manager
-from core.memory.token_buffer_memory import TokenBufferMemory
+from core.memory import ConversationLevelMemory
 from core.model_runtime.entities.message_entities import (
     ImagePromptMessageContent,
     PromptMessage,
@@ -46,7 +46,7 @@ class SimplePromptTransform(PromptTransform):
         query: str,
         files: Sequence["File"],
         context: str | None,
-        memory: TokenBufferMemory | None,
+        memory: ConversationLevelMemory | None,
         model_config: ModelConfigWithCredentialsEntity,
         image_detail_config: ImagePromptMessageContent.DETAIL | None = None,
         context_files: list["File"] | None = None,
@@ -187,7 +187,7 @@ class SimplePromptTransform(PromptTransform):
         query: str,
         context: str | None,
         files: Sequence["File"],
-        memory: TokenBufferMemory | None,
+        memory: ConversationLevelMemory | None,
         model_config: ModelConfigWithCredentialsEntity,
         image_detail_config: ImagePromptMessageContent.DETAIL | None = None,
         context_files: list["File"] | None = None,
@@ -234,7 +234,7 @@ class SimplePromptTransform(PromptTransform):
         query: str,
         context: str | None,
         files: Sequence["File"],
-        memory: TokenBufferMemory | None,
+        memory: ConversationLevelMemory | None,
         model_config: ModelConfigWithCredentialsEntity,
         image_detail_config: ImagePromptMessageContent.DETAIL | None = None,
         context_files: list["File"] | None = None,

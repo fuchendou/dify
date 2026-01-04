@@ -17,7 +17,7 @@ from core.app.entities.app_invoke_entities import (
 from core.callback_handler.agent_tool_callback_handler import DifyAgentCallbackHandler
 from core.callback_handler.index_tool_callback_handler import DatasetIndexToolCallbackHandler
 from core.file import file_manager
-from core.memory.token_buffer_memory import TokenBufferMemory
+from core.memory import ConversationLevelMemory
 from core.model_manager import ModelInstance
 from core.model_runtime.entities import (
     AssistantPromptMessage,
@@ -60,7 +60,7 @@ class BaseAgentRunner(AppRunner):
         message: Message,
         user_id: str,
         model_instance: ModelInstance,
-        memory: TokenBufferMemory | None = None,
+        memory: ConversationLevelMemory | None = None,
         prompt_messages: list[PromptMessage] | None = None,
     ):
         self.tenant_id = tenant_id

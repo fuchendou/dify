@@ -7,7 +7,7 @@ from typing import Any, cast
 
 from core.app.entities.app_invoke_entities import ModelConfigWithCredentialsEntity
 from core.file import File
-from core.memory.token_buffer_memory import TokenBufferMemory
+from core.memory import ConversationLevelMemory
 from core.model_manager import ModelInstance
 from core.model_runtime.entities import ImagePromptMessageContent
 from core.model_runtime.entities.llm_entities import LLMUsage
@@ -299,7 +299,7 @@ class ParameterExtractorNode(Node[ParameterExtractorNodeData]):
         query: str,
         variable_pool: VariablePool,
         model_config: ModelConfigWithCredentialsEntity,
-        memory: TokenBufferMemory | None,
+        memory: ConversationLevelMemory | None,
         files: Sequence[File],
         vision_detail: ImagePromptMessageContent.DETAIL | None = None,
     ) -> tuple[list[PromptMessage], list[PromptMessageTool]]:
@@ -381,7 +381,7 @@ class ParameterExtractorNode(Node[ParameterExtractorNodeData]):
         query: str,
         variable_pool: VariablePool,
         model_config: ModelConfigWithCredentialsEntity,
-        memory: TokenBufferMemory | None,
+        memory: ConversationLevelMemory | None,
         files: Sequence[File],
         vision_detail: ImagePromptMessageContent.DETAIL | None = None,
     ) -> list[PromptMessage]:
@@ -419,7 +419,7 @@ class ParameterExtractorNode(Node[ParameterExtractorNodeData]):
         query: str,
         variable_pool: VariablePool,
         model_config: ModelConfigWithCredentialsEntity,
-        memory: TokenBufferMemory | None,
+        memory: ConversationLevelMemory | None,
         files: Sequence[File],
         vision_detail: ImagePromptMessageContent.DETAIL | None = None,
     ) -> list[PromptMessage]:
@@ -453,7 +453,7 @@ class ParameterExtractorNode(Node[ParameterExtractorNodeData]):
         query: str,
         variable_pool: VariablePool,
         model_config: ModelConfigWithCredentialsEntity,
-        memory: TokenBufferMemory | None,
+        memory: ConversationLevelMemory | None,
         files: Sequence[File],
         vision_detail: ImagePromptMessageContent.DETAIL | None = None,
     ) -> list[PromptMessage]:
@@ -681,7 +681,7 @@ class ParameterExtractorNode(Node[ParameterExtractorNodeData]):
         node_data: ParameterExtractorNodeData,
         query: str,
         variable_pool: VariablePool,
-        memory: TokenBufferMemory | None,
+        memory: ConversationLevelMemory | None,
         max_token_limit: int = 2000,
     ) -> list[ChatModelMessage]:
         model_mode = ModelMode(node_data.model.mode)
@@ -708,7 +708,7 @@ class ParameterExtractorNode(Node[ParameterExtractorNodeData]):
         node_data: ParameterExtractorNodeData,
         query: str,
         variable_pool: VariablePool,
-        memory: TokenBufferMemory | None,
+        memory: ConversationLevelMemory | None,
         max_token_limit: int = 2000,
     ):
         model_mode = ModelMode(node_data.model.mode)

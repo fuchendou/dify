@@ -4,7 +4,7 @@ from core.app.entities.app_invoke_entities import (
     ModelConfigWithCredentialsEntity,
 )
 from core.entities.provider_configuration import ProviderModelBundle
-from core.memory.token_buffer_memory import TokenBufferMemory
+from core.memory import ConversationLevelMemory
 from core.model_runtime.entities.message_entities import (
     AssistantPromptMessage,
     SystemPromptMessage,
@@ -51,7 +51,7 @@ def test_get_prompt():
     model_config_mock.credentials = {}
     model_config_mock.provider_model_bundle = provider_model_bundle_mock
 
-    memory = TokenBufferMemory(conversation=Conversation(), model_instance=model_config_mock)
+    memory = ConversationLevelMemory(conversation=Conversation(), model_instance=model_config_mock)
 
     transform = AgentHistoryPromptTransform(
         model_config=model_config_mock,

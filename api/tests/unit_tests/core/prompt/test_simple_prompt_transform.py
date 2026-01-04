@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
 from core.app.entities.app_invoke_entities import ModelConfigWithCredentialsEntity
-from core.memory.token_buffer_memory import TokenBufferMemory
+from core.memory import ConversationLevelMemory
 from core.model_runtime.entities.message_entities import AssistantPromptMessage, UserPromptMessage
 from core.prompt.simple_prompt_transform import SimplePromptTransform
 from models.model import AppMode, Conversation
@@ -149,7 +149,7 @@ def test__get_chat_model_prompt_messages():
     model_config_mock.provider = "openai"
     model_config_mock.model = "gpt-4"
 
-    memory_mock = MagicMock(spec=TokenBufferMemory)
+    memory_mock = MagicMock(spec=ConversationLevelMemory)
     history_prompt_messages = [UserPromptMessage(content="Hi"), AssistantPromptMessage(content="Hello")]
     memory_mock.get_history_prompt_messages.return_value = history_prompt_messages
 
@@ -196,7 +196,7 @@ def test__get_completion_model_prompt_messages():
     model_config_mock.provider = "openai"
     model_config_mock.model = "gpt-3.5-turbo-instruct"
 
-    memory = TokenBufferMemory(conversation=Conversation(), model_instance=model_config_mock)
+    memory = ConversationLevelMemory(conversation=Conversation(), model_instance=model_config_mock)
 
     history_prompt_messages = [UserPromptMessage(content="Hi"), AssistantPromptMessage(content="Hello")]
     memory.get_history_prompt_messages = MagicMock(return_value=history_prompt_messages)

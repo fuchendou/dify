@@ -249,6 +249,7 @@ class WorkflowNodeExecutionMetadataKey(StrEnum):
     LOOP_VARIABLE_MAP = "loop_variable_map"  # single loop variable output
     DATASOURCE_INFO = "datasource_info"
     COMPLETED_REASON = "completed_reason"  # completed reason for loop node
+    CONTEXT_REF = "context_ref"  # reference/uri for LLM node level persisted context messages
 
 
 class WorkflowNodeExecutionStatus(StrEnum):

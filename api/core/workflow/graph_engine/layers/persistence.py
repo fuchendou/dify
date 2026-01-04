@@ -9,10 +9,12 @@ allowing presentation layers to remain read-only observers of repository
 state.
 """
 
-from collections.abc import Mapping
+import hashlib
+import json
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Union
+from typing import Any, Union, cast
 
 from core.app.entities.app_invoke_entities import AdvancedChatAppGenerateEntity, WorkflowAppGenerateEntity
 from core.ops.entities.trace_entity import TraceTaskName
@@ -46,6 +48,7 @@ from core.workflow.node_events import NodeRunResult
 from core.workflow.repositories.workflow_execution_repository import WorkflowExecutionRepository
 from core.workflow.repositories.workflow_node_execution_repository import WorkflowNodeExecutionRepository
 from core.workflow.workflow_entry import WorkflowEntry
+from extensions.ext_storage import storage
 from libs.datetime_utils import naive_utc_now
 
 
@@ -269,7 +272,11 @@ class WorkflowPersistenceLayer(GraphEngineLayer):
 
     def _handle_node_succeeded(self, event: NodeRunSucceededEvent) -> None:
         domain_execution = self._get_node_execution(event.id)
-        self._update_node_execution(domain_execution, event.node_run_result, WorkflowNodeExecutionStatus.SUCCEEDED)
+        self._update_node_execution(
+            domain_execution,
+            self._with_context_ref(domain_execution, event.node_run_result),
+            WorkflowNodeExecutionStatus.SUCCEEDED,
+        )
 
     def _handle_node_failed(self, event: NodeRunFailedEvent) -> None:
         domain_execution = self._get_node_execution(event.id)
@@ -373,6 +380,68 @@ class WorkflowPersistenceLayer(GraphEngineLayer):
 
         self._workflow_node_execution_repository.save(domain_execution)
         self._workflow_node_execution_repository.save_execution_data(domain_execution)
+
+    def _with_context_ref(self, domain_execution: WorkflowNodeExecution, node_result: NodeRunResult) -> NodeRunResult:
+        """
+        Persist context content to storage and attach a ref (uri/hash/size) into metadata.
+        """
+        context = node_result.outputs.get("context") if node_result.outputs else None
+        if context is None:
+            return node_result
+
+        try:
+            payload_str = json.dumps(context, ensure_ascii=False, default=str)
+        except Exception:
+            return node_result
+
+        payload = payload_str.encode("utf-8")
+        sha256 = hashlib.sha256(payload).hexdigest()
+        size = len(payload)
+
+        metadata = dict(node_result.metadata or {})
+        existing_ref = metadata.get(WorkflowNodeExecutionMetadataKey.CONTEXT_REF)
+        existing_uri = existing_ref.get("uri") if isinstance(existing_ref, Mapping) else None
+        existing_sha = existing_ref.get("sha256") if isinstance(existing_ref, Mapping) else None
+
+        uri = existing_uri or f"context/{domain_execution.workflow_id}/{domain_execution.id}.json"
+
+        if existing_sha != sha256 or not storage.exists(uri):
+            storage.save(uri, payload)
+
+        metadata[WorkflowNodeExecutionMetadataKey.CONTEXT_REF] = {
+            "uri": uri,
+            "sha256": sha256,
+            "size": size,
+        }
+        return node_result.model_copy(update={"metadata": metadata})
+
+    @staticmethod
+    def _load_context_from_ref(ref: Mapping[str, Any]) -> Any | None:
+        """
+        Load context content from storage using a ref dict.
+        """
+        if not ref:
+            return None
+        uri = ref.get("uri")
+        if not uri:
+            return None
+        if not storage.exists(uri):
+            return None
+        data = storage.load(uri)
+        if isinstance(data, bytes):
+            text = data.decode("utf-8")
+        elif isinstance(data, str):
+            text = data
+        else:
+            iterable = cast(Iterable[Any], data)
+            text = "".join(
+                chunk.decode("utf-8") if isinstance(chunk, bytes) else str(chunk)  # type: ignore[union-attr]
+                for chunk in iterable
+            )
+        try:
+            return json.loads(text)
+        except Exception:
+            return None
 
     def _fail_running_node_executions(self, *, error_message: str) -> None:
         now = naive_utc_now()

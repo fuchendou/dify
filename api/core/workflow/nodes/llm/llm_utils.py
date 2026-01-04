@@ -8,7 +8,8 @@ from configs import dify_config
 from core.app.entities.app_invoke_entities import ModelConfigWithCredentialsEntity
 from core.entities.provider_entities import QuotaUnit
 from core.file.models import File
-from core.memory.token_buffer_memory import TokenBufferMemory
+from core.memory import ConversationLevelMemory, NodeLevelMemory
+from core.memory.base import BufferMemory
 from core.model_manager import ModelInstance, ModelManager
 from core.model_runtime.entities.llm_entities import LLMUsage
 from core.model_runtime.entities.model_entities import ModelType
@@ -86,11 +87,27 @@ def fetch_files(variable_pool: VariablePool, selector: Sequence[str]) -> Sequenc
 
 
 def fetch_memory(
-    variable_pool: VariablePool, app_id: str, node_data_memory: MemoryConfig | None, model_instance: ModelInstance
-) -> TokenBufferMemory | None:
+    variable_pool: VariablePool,
+    tenant_id: str,
+    app_id: str,
+    node_data_memory: MemoryConfig | None,
+    model_instance: ModelInstance,
+) -> BufferMemory | None:
     if not node_data_memory:
         return None
+    if node_data_memory.mode == "node":
+        workflow_id_variable = variable_pool.get(["sys", SystemVariableKey.WORKFLOW_ID])
+        if not isinstance(workflow_id_variable, StringSegment):
+            return None
 
+        return NodeLevelMemory(
+            tenant_id=tenant_id,
+            app_id=app_id,
+            workflow_id=workflow_id,
+            workflow_run_id=workflow_run_id,
+            node_id=node_id,
+            model_instance=model_instance,
+        )
     # get conversation id
     conversation_id_variable = variable_pool.get(["sys", SystemVariableKey.CONVERSATION_ID])
     if not isinstance(conversation_id_variable, StringSegment):
@@ -103,7 +120,7 @@ def fetch_memory(
         if not conversation:
             return None
 
-    memory = TokenBufferMemory(conversation=conversation, model_instance=model_instance)
+    memory = ConversationLevelMemory(conversation=conversation, model_instance=model_instance)
     return memory
 
 

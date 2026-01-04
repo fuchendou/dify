@@ -12,7 +12,7 @@ from core.app.entities.app_invoke_entities import (
 from core.app.entities.queue_entities import QueueAnnotationReplyEvent
 from core.callback_handler.index_tool_callback_handler import DatasetIndexToolCallbackHandler
 from core.file import File
-from core.memory.token_buffer_memory import TokenBufferMemory
+from core.memory import ConversationLevelMemory
 from core.model_manager import ModelInstance
 from core.model_runtime.entities.message_entities import ImagePromptMessageContent
 from core.moderation.base import ModerationError
@@ -72,7 +72,7 @@ class ChatAppRunner(AppRunner):
                 model=application_generate_entity.model_conf.model,
             )
 
-            memory = TokenBufferMemory(conversation=conversation, model_instance=model_instance)
+            memory = ConversationLevelMemory(conversation=conversation, model_instance=model_instance)
 
         # organize all inputs and template to prompt messages
         # Include: prompt template, inputs, query(optional), files(optional)

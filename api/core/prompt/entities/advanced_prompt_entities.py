@@ -48,3 +48,4 @@ class MemoryConfig(BaseModel):
     role_prefix: RolePrefix | None = None
     window: WindowConfig
     query_prompt_template: str | None = None
+    mode: Literal["node", "conversation"] = "conversation"

@@ -15,7 +15,7 @@ from core.app.entities.queue_entities import QueueAgentMessageEvent, QueueLLMChu
 from core.app.features.annotation_reply.annotation_reply import AnnotationReplyFeature
 from core.app.features.hosting_moderation.hosting_moderation import HostingModerationFeature
 from core.external_data_tool.external_data_fetch import ExternalDataFetch
-from core.memory.token_buffer_memory import TokenBufferMemory
+from core.memory import ConversationLevelMemory
 from core.model_manager import ModelInstance
 from core.model_runtime.entities.llm_entities import LLMResult, LLMResultChunk, LLMResultChunkDelta, LLMUsage
 from core.model_runtime.entities.message_entities import (
@@ -81,7 +81,7 @@ class AppRunner:
         files: Sequence["File"],
         query: str = "",
         context: str | None = None,
-        memory: TokenBufferMemory | None = None,
+        memory: ConversationLevelMemory | None = None,
         image_detail_config: ImagePromptMessageContent.DETAIL | None = None,
         context_files: list["File"] | None = None,
     ) -> tuple[list[PromptMessage], list[str] | None]:

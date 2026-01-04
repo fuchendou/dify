@@ -3,7 +3,7 @@ from typing import cast
 from core.app.entities.app_invoke_entities import (
     ModelConfigWithCredentialsEntity,
 )
-from core.memory.token_buffer_memory import TokenBufferMemory
+from core.memory import ConversationLevelMemory
 from core.model_runtime.entities.message_entities import (
     PromptMessage,
     SystemPromptMessage,
@@ -23,7 +23,7 @@ class AgentHistoryPromptTransform(PromptTransform):
         model_config: ModelConfigWithCredentialsEntity,
         prompt_messages: list[PromptMessage],
         history_messages: list[PromptMessage],
-        memory: TokenBufferMemory | None = None,
+        memory: ConversationLevelMemory | None = None,
     ):
         self.model_config = model_config
         self.prompt_messages = prompt_messages

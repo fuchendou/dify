@@ -5,7 +5,7 @@ import pytest
 from configs import dify_config
 from core.app.app_config.entities import ModelConfigEntity
 from core.file import File, FileTransferMethod, FileType
-from core.memory.token_buffer_memory import TokenBufferMemory
+from core.memory import ConversationLevelMemory
 from core.model_runtime.entities.message_entities import (
     AssistantPromptMessage,
     ImagePromptMessageContent,
@@ -35,7 +35,7 @@ def test__get_completion_model_prompt_messages():
     files = []
     context = "I am superman."
 
-    memory = TokenBufferMemory(conversation=Conversation(), model_instance=model_config_mock)
+    memory = ConversationLevelMemory(conversation=Conversation(), model_instance=model_config_mock)
 
     history_prompt_messages = [UserPromptMessage(content="Hi"), AssistantPromptMessage(content="Hello")]
     memory.get_history_prompt_messages = MagicMock(return_value=history_prompt_messages)
@@ -74,7 +74,7 @@ def test__get_chat_model_prompt_messages(get_chat_model_args):
     files = []
     query = "Hi2."
 
-    memory = TokenBufferMemory(conversation=Conversation(), model_instance=model_config_mock)
+    memory = ConversationLevelMemory(conversation=Conversation(), model_instance=model_config_mock)
 
     history_prompt_messages = [UserPromptMessage(content="Hi1."), AssistantPromptMessage(content="Hello1!")]
     memory.get_history_prompt_messages = MagicMock(return_value=history_prompt_messages)

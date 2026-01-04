@@ -14,7 +14,7 @@ from core.file import File, FileTransferMethod, FileType, file_manager
 from core.helper.code_executor import CodeExecutor, CodeLanguage
 from core.llm_generator.output_parser.errors import OutputParserError
 from core.llm_generator.output_parser.structured_output import invoke_llm_with_structured_output
-from core.memory.token_buffer_memory import TokenBufferMemory
+from core.memory import ConversationLevelMemory
 from core.model_manager import ModelInstance, ModelManager
 from core.model_runtime.entities import (
     ImagePromptMessageContent,
@@ -299,6 +299,7 @@ class LLMNode(Node[LLMNodeData]):
                 "reasoning_content": reasoning_content,
                 "usage": jsonable_encoder(usage),
                 "finish_reason": finish_reason,
+                "context": self._build_context_messages(clean_text=clean_text, prompt_messages=prompt_messages),
             }
             if structured_output:
                 outputs["structured_output"] = structured_output.structured_output
@@ -528,6 +529,18 @@ class LLMNode(Node[LLMNodeData]):
     def _image_file_to_markdown(file: "File", /):
         text_chunk = f"![]({file.generate_url()})"
         return text_chunk
+
+    @staticmethod
+    def _build_context_messages(
+        *,
+        clean_text: str,
+        prompt_messages: Sequence[PromptMessage],
+    ) -> list[PromptMessage]:
+        return [
+            prompt_message.model_copy(deep=True)
+            for prompt_message in prompt_messages
+            if prompt_message.role in {PromptMessageRole.USER, PromptMessageRole.ASSISTANT}
+        ] + [AssistantPromptMessage(content=clean_text)]
 
     @classmethod
     def _split_reasoning(
@@ -776,7 +789,7 @@ class LLMNode(Node[LLMNodeData]):
         sys_query: str | None = None,
         sys_files: Sequence["File"],
         context: str | None = None,
-        memory: TokenBufferMemory | None = None,
+        memory: ConversationLevelMemory | None = None,
         model_config: ModelConfigWithCredentialsEntity,
         prompt_template: Sequence[LLMNodeChatModelMessage] | LLMNodeCompletionModelPromptTemplate,
         memory_config: MemoryConfig | None = None,
@@ -1335,7 +1348,7 @@ def _calculate_rest_token(
 
 def _handle_memory_chat_mode(
     *,
-    memory: TokenBufferMemory | None,
+    memory: ConversationLevelMemory | None,
     memory_config: MemoryConfig | None,
     model_config: ModelConfigWithCredentialsEntity,
 ) -> Sequence[PromptMessage]:
@@ -1352,7 +1365,7 @@ def _handle_memory_chat_mode(
 
 def _handle_memory_completion_mode(
     *,
-    memory: TokenBufferMemory | None,
+    memory: ConversationLevelMemory | None,
     memory_config: MemoryConfig | None,
     model_config: ModelConfigWithCredentialsEntity,
 ) -> str:
