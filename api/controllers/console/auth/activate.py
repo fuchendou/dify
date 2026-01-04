@@ -67,6 +67,11 @@ class ActivateCheckApi(Resource):
 
         invitation = RegisterService.get_invitation_with_case_fallback(workspaceId, args.email, token)
         if invitation:
+            # Check workspace permission for member invitations (secondary check for old tokens)
+            from libs.workspace_permission import check_workspace_member_invite_permission
+
+            check_workspace_member_invite_permission(workspaceId)
+
             data = invitation.get("data", {})
             tenant = invitation.get("tenant", None)
             workspace_name = tenant.name if tenant else None
