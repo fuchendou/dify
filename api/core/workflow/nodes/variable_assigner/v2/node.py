@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 _UPDATED_VARIABLES_KEY = "__updated_variables"
 
+
 def _target_mapping_from_item(mapping: MutableMapping[str, Sequence[str]], node_id: str, item: VariableOperationItem):
     selector_node_id = item.variable_selector[0]
     if selector_node_id != CONVERSATION_VARIABLE_NODE_ID:

@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 _UPDATED_VARIABLES_KEY = "__updated_variables"
 
+
 class VariableAssignerNode(Node[VariableAssignerData]):
     node_type = NodeType.VARIABLE_ASSIGNER
 
